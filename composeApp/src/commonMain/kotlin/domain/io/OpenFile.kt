@@ -29,7 +29,7 @@ data class LookupData(
 
 /** Platform-specific handler for file-openings [openRequests] */
 @Composable
-expect fun OpenFileRequests(
+expect fun OpenFileProcessor(
     lookupData: LookupData,
     openRequests: Flow<Unit>,
     onOpen: (content: String?, filename: String?) -> Unit,

@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import java.io.IOException
 
 @Composable
-actual fun OpenFileRequests(
+actual fun OpenFileProcessor(
     lookupData: LookupData,
     openRequests: Flow<Unit>,
     onOpen: (content: String?, filename: String?) -> Unit,
@@ -35,6 +35,7 @@ actual fun OpenFileRequests(
     }
 }
 
+/** GetContent-like contract that accepts several mime types */
 private class MultipleMimeTypeGetContentContract : ActivityResultContract<Array<String>, Uri?>() {
 
     private val getContentContract = ActivityResultContracts.GetContent()

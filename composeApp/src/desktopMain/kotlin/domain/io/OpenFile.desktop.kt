@@ -22,7 +22,7 @@ import java.io.IOException
 
 // works on Linux, todo: test on Windows
 @Composable
-actual fun OpenFileRequests(
+actual fun OpenFileProcessor(
     lookupData: LookupData,
     openRequests: Flow<Unit>,
     onOpen: (content: String?, filename: String?) -> Unit,

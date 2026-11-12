@@ -14,6 +14,7 @@ import domain.collectLatestWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -23,7 +24,7 @@ import java.io.IOException
 // https://developer.android.com/training/data-storage/shared/documents-files#persist-permissions
 
 @Composable
-actual fun SaveFileRequests(
+actual fun SaveFileProcessor(
     saveData: SaveData<String>,
     saveRequests: Flow<SaveRequest>,
     onSaved: (SaveResult) -> Unit,
@@ -65,9 +66,6 @@ actual fun SaveFileRequests(
                     } else {
                         try {
                             saveToUri(context, uri, saveData, onSaved)
-                        } catch (e: FileNotFoundException) {
-                            e.printStackTrace()
-                            createDocumentLauncher.launch(filename)
                         } catch (e: IOException) {
                             e.printStackTrace()
                             createDocumentLauncher.launch(filename)
@@ -88,7 +86,7 @@ actual fun SaveFileRequests(
     }
 }
 
-@Throws(FileNotFoundException::class, IOException::class, SecurityException::class)
+@Throws(IOException::class, SecurityException::class)
 private suspend fun saveToUri(
     context: Context,
     uri: Uri,
@@ -120,10 +118,12 @@ private suspend fun saveToUri(
             error = "contentResolver.openFileDescriptor(uri, 'w') returned null"
         ))
     } else {
-        fileDescriptor.use { parcelFileDescriptor ->
-            FileOutputStream(parcelFileDescriptor.fileDescriptor).use { outputStream ->
-                val content = saveData.prepareContent(name ?: defaultName)
-                outputStream.write(content.toByteArray())
+        withContext(Dispatchers.IO) {
+            fileDescriptor.use { parcelFileDescriptor ->
+                FileOutputStream(parcelFileDescriptor.fileDescriptor).use { outputStream ->
+                    val content = saveData.prepareContent(name ?: defaultName)
+                    outputStream.write(content.toByteArray())
+                }
             }
         }
         persistReadWritePermissions(context, uri)

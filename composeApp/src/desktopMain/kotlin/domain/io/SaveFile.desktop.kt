@@ -21,7 +21,7 @@ import java.io.File
 import java.io.IOException
 
 @Composable
-actual fun SaveFileRequests(
+actual fun SaveFileProcessor(
     saveData: SaveData<String>,
     saveRequests: Flow<SaveRequest>,
     onSaved: (SaveResult) -> Unit,
@@ -29,38 +29,6 @@ actual fun SaveFileRequests(
     val coroutineScope = rememberCoroutineScope()
     var dialogIsOpen by remember { mutableStateOf(false) }
     var lastDirectory by remember { mutableStateOf(saveData.lastDirectory) }
-
-    suspend fun tryToSave(
-        filename: String?,
-        directory: String?,
-    ) {
-        if (filename != null) {
-            if (directory != null)
-                lastDirectory = directory
-            val file = File(directory, filename)
-            try {
-                withContext(Dispatchers.IO) {
-                    val content = saveData.prepareContent(file.nameWithoutExtension)
-                    saveTextFile(content, file)
-                }
-                onSaved(SaveResult.Success(
-                    filename = filename,
-                    directory = lastDirectory,
-                ))
-            } catch (e: IOException) {
-                onSaved(SaveResult.Failure(
-                    filename = filename,
-                    directory = lastDirectory,
-                    error = e.message,
-                ))
-            }
-        } else {
-            onSaved(SaveResult.Cancelled(
-                directory = lastDirectory,
-            ))
-        }
-    }
-
     if (dialogIsOpen) {
         SaveFileDialog(
             defaultDirectory = lastDirectory,
@@ -69,7 +37,14 @@ actual fun SaveFileRequests(
         ) { directory, filename ->
             dialogIsOpen = false
             coroutineScope.launch {
-                tryToSave(filename = filename, directory = directory)
+                tryToSave(
+                    saveData = saveData,
+                    filename = filename,
+                    directory = directory,
+                    lastDirectory = lastDirectory,
+                    setLastDirectory = { lastDirectory = it },
+                    onSaved = onSaved,
+                )
             }
         }
     }
@@ -84,12 +59,51 @@ actual fun SaveFileRequests(
                 dialogIsOpen = false
                 coroutineScope.launch {
                     tryToSave(
+                        saveData = saveData,
                         filename = saveData.filename,
                         directory = lastDirectory,
+                        lastDirectory = lastDirectory,
+                        setLastDirectory = { lastDirectory = it },
+                        onSaved = onSaved,
                     )
                 }
             }
         }
+    }
+}
+
+private suspend fun tryToSave(
+    saveData: SaveData<String>,
+    filename: String?,
+    directory: String?,
+    lastDirectory: String?,
+    setLastDirectory: (String?) -> Unit,
+    onSaved: (SaveResult) -> Unit,
+) {
+    if (filename != null) {
+        if (directory != null)
+            setLastDirectory(directory)
+        val file = File(directory, filename)
+        try {
+            withContext(Dispatchers.IO) {
+                val content = saveData.prepareContent(file.nameWithoutExtension)
+                saveTextFile(content, file)
+            }
+            onSaved(SaveResult.Success(
+                filename = filename,
+                directory = lastDirectory,
+            ))
+        } catch (e: IOException) {
+            onSaved(SaveResult.Failure(
+                filename = filename,
+                directory = lastDirectory,
+                error = e.message,
+            ))
+        }
+    } else {
+        onSaved(SaveResult.Cancelled(
+            directory = lastDirectory,
+        ))
     }
 }
 
@@ -109,7 +123,7 @@ private fun addUniqueFilenameSuffix(originalFile: File): File {
     return file
 }
 
-fun saveTextFile(content: String, originalFile: File) {
+private fun saveTextFile(content: String, originalFile: File) {
     // NOTE: we want to allow overriding old files
     val file = originalFile
     if (!file.exists())

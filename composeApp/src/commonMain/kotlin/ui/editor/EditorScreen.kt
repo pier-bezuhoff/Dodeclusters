@@ -94,7 +94,9 @@ import domain.collectLatestWithLifecycle
 import domain.collectWithLifecycle
 import domain.io.DdcSharing
 import domain.io.LookupData
-import domain.io.OpenFileRequests
+import domain.io.OpenFileProcessor
+import domain.io.SaveData
+import domain.io.SaveFileProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
@@ -427,7 +429,7 @@ fun EditorScreenRoot(
     val lookupData = LookupData.YAML.copy(
         directory = viewModel.saveConfig.directory,
     )
-    OpenFileRequests(
+    OpenFileProcessor(
         lookupData = lookupData,
         onOpen = { content, filename ->
             viewModel.loadDdcFromYaml(content, filename)
@@ -435,6 +437,24 @@ fun EditorScreenRoot(
         },
         openRequests = viewModel.openFileRequests,
     )
+    val saveData = SaveData( // name.yml
+        name = viewModel.saveConfig.name ?: Tool.Save.DEFAULT_NAME,
+        extension = Tool.Save.EXTENSION,
+        lastDirectory = viewModel.saveConfig.directory,
+        uri = viewModel.saveConfig.uri,
+        otherDisplayedExtensions = Tool.Save.otherDisplayedExtensions,
+        mimeType = Tool.Save.MIME_TYPE,
+        prepareContent = viewModel::saveAsYaml,
+    )
+    SaveFileProcessor(
+        saveData = saveData,
+        saveRequests = viewModel.saveFileRequests,
+    ) { saveResult ->
+        println(if (saveResult.isSuccess) "YAML saved" else "YAML not saved")
+        viewModel.onSaveFinished(saveResult)
+        viewModel.closeDialog()
+        coroutineScope.launch { drawerState.close() }
+    }
     CollectSnackbarMessages(viewModel, snackbarHostState)
     ReplaceBackgroundDependingOnTheme(viewModel)
     PreloadIcons()

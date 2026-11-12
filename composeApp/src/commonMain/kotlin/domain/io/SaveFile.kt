@@ -25,7 +25,7 @@ enum class SaveRequest {
 }
 
 @Composable
-expect fun SaveFileRequests(
+expect fun SaveFileProcessor(
     saveData: SaveData<String>,
     saveRequests: Flow<SaveRequest>,
     onSaved: (SaveResult) -> Unit,

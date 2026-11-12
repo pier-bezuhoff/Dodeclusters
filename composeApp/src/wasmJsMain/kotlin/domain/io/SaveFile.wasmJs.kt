@@ -56,7 +56,7 @@ import org.w3c.files.Blob
 import org.w3c.files.BlobPropertyBag
 
 @Composable
-actual fun SaveFileRequests(
+actual fun SaveFileProcessor(
     saveData: SaveData<String>,
     saveRequests: Flow<SaveRequest>,
     onSaved: (SaveResult) -> Unit,
@@ -69,28 +69,6 @@ actual fun SaveFileRequests(
         selection = TextRange(saveData.name.length),
     )) }
     val textFieldFocusRequester = remember { FocusRequester() }
-
-    fun tryToDownload() {
-        coroutineScope.launch {
-            val data = saveData.copy(name = nameTFV.text)
-            try {
-                val content = withContext(Dispatchers.Default) {
-                    data.prepareContent(nameTFV.text)
-                }
-                downloadTextFileAsBlob(data.filename, content)
-                onSaved(SaveResult.Success(
-                    filename = data.filename,
-                ))
-            } catch (e: Exception) {
-                onSaved(SaveResult.Failure(
-                    filename = data.filename,
-                    error = e.message,
-                ))
-            }
-        }
-        dialogIsOpen = false
-    }
-
     if (dialogIsOpen) {
         // BUG: for some only-god-knows-why reason when i try to use
         //  non-hard-coded or maybe longer strings here, on Android/Chrome
@@ -105,7 +83,16 @@ actual fun SaveFileRequests(
             focusRequester = textFieldFocusRequester,
             onNameChange = { nameTFV = it },
             onDismissRequest = { dialogIsOpen = false },
-            tryToDownload = { tryToDownload() },
+            tryToDownload = {
+                coroutineScope.launch {
+                    tryToDownload(
+                        saveData = saveData,
+                        name = nameTFV.text,
+                        closeDialog = { dialogIsOpen = false },
+                        onSaved = onSaved,
+                    )
+                }
+            },
         )
         DisposableEffect(dialogIsOpen) {
             textFieldFocusRequester.requestFocus()
@@ -117,11 +104,40 @@ actual fun SaveFileRequests(
             SaveRequest.SAVE_AS -> {
                 dialogIsOpen = true
             }
-            SaveRequest.QUICK_SAVE -> {
-                tryToDownload()
+            SaveRequest.QUICK_SAVE -> coroutineScope.launch {
+                tryToDownload(
+                    saveData = saveData,
+                    name = nameTFV.text,
+                    closeDialog = { dialogIsOpen = false },
+                    onSaved = onSaved,
+                )
             }
         }
     }
+}
+
+private suspend fun tryToDownload(
+    saveData: SaveData<String>,
+    name: String,
+    closeDialog: () -> Unit,
+    onSaved: (SaveResult) -> Unit,
+) {
+    val data = saveData.copy(name = name)
+    try {
+        val content = withContext(Dispatchers.Default) {
+            data.prepareContent(name)
+        }
+        downloadTextFileAsBlob(data.filename, content)
+        onSaved(SaveResult.Success(
+            filename = data.filename,
+        ))
+    } catch (e: Exception) {
+        onSaved(SaveResult.Failure(
+            filename = data.filename,
+            error = e.message,
+        ))
+    }
+    closeDialog()
 }
 
 @Composable
@@ -188,7 +204,7 @@ private fun SaveFileDialog(
 // showSaveFilePicker() is still experimental, cmon js bros...
 
 // saves properly with given filename
-fun downloadTextFileAsBlob(filename: String, content: String) {
+private fun downloadTextFileAsBlob(filename: String, content: String) {
     val blobContent = JsArray<JsAny?>()
     blobContent[0] = content.toJsString()
     // Q: why text/plain and not application/yaml or smth else?

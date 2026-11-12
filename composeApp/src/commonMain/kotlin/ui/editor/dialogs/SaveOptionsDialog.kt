@@ -57,7 +57,7 @@ import domain.io.SaveBitmapAsPngButton
 import domain.io.SaveToolButton
 import domain.io.SaveConfig
 import domain.io.SaveData
-import domain.io.SaveFileRequests
+import domain.io.SaveFileProcessor
 import domain.io.SaveRequest
 import domain.io.SaveResult
 import domain.io.SharedId
@@ -94,15 +94,6 @@ fun SaveOptionsDialog(
     svgSaveRequests: MutableSharedFlow<SaveRequest> = remember { SharedRequestFlow() },
     dialogActions: SharedFlow<DialogAction>? = null,
 ) {
-    val yamlSaveData = SaveData( // name.yml
-        name = saveConfig.name ?: Tool.Save.DEFAULT_NAME,
-        extension = Tool.Save.EXTENSION,
-        lastDirectory = saveConfig.directory,
-        uri = saveConfig.uri,
-        otherDisplayedExtensions = Tool.Save.otherDisplayedExtensions,
-        mimeType = Tool.Save.MIME_TYPE,
-        prepareContent = saveAsYaml,
-    )
     val pngSaveData = SaveData(
         name = saveConfig.name ?: Tool.PngExport.DEFAULT_NAME,
         extension = Tool.PngExport.EXTENSION,
@@ -123,15 +114,8 @@ fun SaveOptionsDialog(
     var loadingShared: LoadingState<SharedIdAndOwnedStatus>? by remember { mutableStateOf(
         ddcSharing?.shared?.let { LoadingState.Completed(it) }
     ) }
-    SaveFileRequests(
-        saveData = yamlSaveData,
-        saveRequests = yamlSaveRequests,
-    ) { saveResult ->
-        println(if (saveResult.isSuccess) "YAML saved" else "YAML not saved")
-        onSaved(saveResult)
-        onConfirm()
-    }
-    SaveFileRequests(
+    // yaml save processor is in EditorScreenRoot
+    SaveFileProcessor(
         saveData = svgSaveData,
         saveRequests = svgSaveRequests,
     ) { saveResult ->

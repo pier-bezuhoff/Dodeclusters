@@ -13,17 +13,17 @@ import org.w3c.files.FileReader
 import org.w3c.files.get
 
 @Composable
-actual fun OpenFileRequests(
+actual fun OpenFileProcessor(
     lookupData: LookupData,
     openRequests: Flow<Unit>,
     onOpen: (content: String?, filename: String?) -> Unit,
 ) {
     openRequests.collectLatestWithLifecycle(lookupData) {
-        onClick(lookupData, onOpen)
+        processOpenFileRequest(lookupData, onOpen)
     }
 }
 
-private fun onClick(
+private fun processOpenFileRequest(
     lookupData: LookupData,
     onOpen: (content: String?, filename: String?) -> Unit
 ) {
@@ -39,18 +39,21 @@ private fun onClick(
     }
 }
 
-fun queryFile(lookupData: LookupData, callback: (file: File?) -> Unit) {
+private inline fun queryFile(
+    lookupData: LookupData,
+    crossinline onFile: (file: File?) -> Unit,
+) {
     val input = document.createElement("input") as HTMLInputElement
     input.type = "file"
     input.accept = lookupData.htmlFileInputAccept
     input.onchange = { event ->
         val file = input.files?.get(0)
 //        val file = extractFileFromEvent(event)
-        callback(file)
+        onFile(file)
     }
-    input.setAttribute("style", "display: none") // this should work
+    input.setAttribute("style", "display: none")
     input.click()
 }
 
-fun extractFileFromEvent(event: Event): File =
+private fun extractFileFromEvent(event: Event): File =
     js("event.target.files[0]")
